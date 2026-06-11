@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <title>最強網路線挑戰賽 - Zyxel Cat.6A</title>
     <style>
         :root {
@@ -18,10 +18,12 @@
             padding: 0;
             user-select: none;
             -webkit-user-select: none;
+            /* 修正：禁止手機瀏覽器的預設雙擊放大與手勢縮放 */
+            touch-action: manipulation;
         }
 
         body {
-            background-color: #1e293b; /* 外層底色改為深藍灰，更有質感 */
+            background-color: #1e293b; 
             font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
             color: #fff;
             display: flex;
@@ -29,6 +31,10 @@
             align-items: center;
             min-height: 100vh;
             overflow: hidden;
+            /* 修正：防堵 iOS 橡皮筋回彈與外層滾動 */
+            position: fixed;
+            width: 100%;
+            height: 100%;
         }
 
         /* 模擬手機 RWD 容器 */
@@ -37,7 +43,7 @@
             max-width: 450px;
             height: 100vh;
             max-height: 850px;
-            background-image: url('./遊戲背景.png'); /* 確保抓取同資料夾的圖片 */
+            background-image: url('遊戲背景.png'); 
             background-size: cover;
             background-position: top center;
             background-repeat: no-repeat;
@@ -45,12 +51,14 @@
             position: relative;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end; /* 關鍵修正：將所有遊戲物件對齊底部 */
+            justify-content: flex-end; 
             padding: 20px;
             padding-bottom: 30px;
             overflow: hidden;
             background-color: #000;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            /* 修正：確保容器內也完全不允許縮放手勢 */
+            touch-action: none;
         }
 
         .header, .stage-area {
@@ -60,7 +68,7 @@
         .dashboard {
             display: flex;
             gap: 15px;
-            margin-top: auto; /* 關鍵修正：自動推開上方空間，不遮擋主視覺 */
+            margin-top: auto; 
             margin-bottom: 20px;
         }
         .panel {
@@ -71,7 +79,7 @@
             padding: 10px;
             text-align: center;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px); /* 增加背景模糊，讓數值更清晰 */
+            backdrop-filter: blur(4px);
         }
         .panel-label {
             font-size: 12px;
@@ -91,7 +99,7 @@
         }
 
         .interactive-zone {
-            min-height: 240px; /* 固定高度，避免過度延展 */
+            min-height: 240px; 
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -300,8 +308,8 @@
         </div>
 
         <div class="footer-tips" id="tips-panel">
-            <div class="tip-row"><span class="tip-icon">⚡</span>保持節奏，快速插拔能獲得更高的分數！</div>
-            <div class="tip-row"><span class="tip-icon">🛡️</span>Zyxel Cat.6A 接頭耐用升級，插拔更可靠！</div>
+            <div class="tip-row"><span class="tip-icon">⚡</span>保持節奏，快速拔插能獲得更高的分數！</div>
+            <div class="tip-row"><span class="tip-icon">🛡️</span>Zyxel Cat.6A 接頭耐用升級，拔插更可靠！</div>
         </div>
 
         <button class="start-btn" id="main-action-btn">開始挑戰</button>
@@ -309,7 +317,7 @@
         <div class="overlay" id="result-overlay">
             <div class="result-badge" id="res-badge">C</div>
             <div class="result-title" id="res-title">繼續加油</div>
-            <div class="result-score">共完成 <span id="res-score">0</span> 次完美插拔</div>
+            <div class="result-score">共完成 <span id="res-score">0</span> 次完美拔插</div>
             <div class="result-desc" id="res-desc">文案載入中...</div>
             <div class="action-btns">
                 <button class="action-btn btn-restart" id="btn-retry">再玩一次</button>
@@ -348,6 +356,22 @@
         const connectorEl = document.getElementById('connector');
         const mainBtn = document.getElementById('main-action-btn');
         const resultOverlay = document.getElementById('result-overlay');
+
+        // 修正：用 JavaScript 徹底封鎖手機雙擊放大的預設行為
+        document.addEventListener('touchstart', function (event) {
+            if (event.touches.length > 1) {
+                event.preventDefault(); // 阻擋兩隻手指以上的放大手勢
+            }
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault(); // 阻擋 300 毫秒內的雙擊放大預設行為
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
 
         mainBtn.addEventListener('click', () => {
             if (gameState === 'IDLE') startGame();
@@ -417,16 +441,16 @@
             let title = '繼續加油';
             let desc = '熱身完畢，再玩一次，挑戰手指極限吧！';
 
-            if (score >= 500) {
+            if (score >= 130) {
                 grade = 'SSS'; title = '超神玩家';
                 desc = '你的手指已經超越光速！跟 Zyxel Cat.6A 一樣穩如泰山、堅不可摧！';
-            } else if (score >= 200) {
+            } else if (score >= 120) {
                 grade = 'S'; title = '穩速達人';
-                desc = '手速驚人！這條線被你插拔到發光，依然完美零受損！';
-            } else if (score >= 150) {
+                desc = '手速驚人！這條線被你拔插到發光，依然完美零受損！';
+            } else if (score >= 100) {
                 grade = 'A'; title = '表現不錯';
                 desc = '節奏感很好喔！離網路界的終極耐力只差一步了！';
-            } else if (score >= 100) {
+            } else if (score >= 70) {
                 grade = 'B'; title = '再接再厲';
                 desc = '還可以更快！快換上 Zyxel Cat.6A 激發你的潛能！';
             }
