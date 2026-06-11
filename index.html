@@ -29,6 +29,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            min-height: 100dvh; /* 支援動態視窗高度 */
             overflow: hidden;
             position: fixed;
             width: 100%;
@@ -40,7 +41,7 @@
             width: 100%;
             max-width: 450px;
             height: 100vh;
-            max-height: 850px;
+            height: 100dvh; /* 修正：解決行動裝置工具列遮擋問題 */
             background-image: url('遊戲背景.png'); 
             background-size: cover;
             background-position: top center;
@@ -50,8 +51,8 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-end; 
-            padding: 20px;
-            padding-bottom: 30px;
+            padding: 15px;
+            padding-bottom: 25px; /* 預留底部安全距離 */
             overflow: hidden;
             background-color: #000;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
@@ -64,16 +65,16 @@
         
         .dashboard {
             display: flex;
-            gap: 15px;
-            margin-top: auto; 
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-top: auto; /* 將物件完全推到圖片下方的空白區域 */
+            margin-bottom: 15px;
         }
         .panel {
             flex: 1;
             background: var(--panel-bg);
             border: 1px solid #334155;
             border-radius: 12px;
-            padding: 10px;
+            padding: 8px;
             text-align: center;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(4px);
@@ -81,11 +82,11 @@
         .panel-label {
             font-size: 12px;
             color: #94a3b8;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
         .panel-value {
             font-family: monospace;
-            font-size: 32px;
+            font-size: 28px;
             font-weight: bold;
             color: var(--zyxel-green);
             text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
@@ -96,20 +97,20 @@
         }
 
         .interactive-zone {
-            min-height: 240px; 
+            min-height: 200px; /* 微調高度，確保整體介面能被壓縮在手機內 */
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             position: relative;
             background: radial-gradient(circle, rgba(34,197,94,0.1) 0%, rgba(0,0,0,0) 70%);
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             border-radius: 20px;
         }
 
         .lan-port {
-            width: 100px;
-            height: 100px;
+            width: 90px;
+            height: 90px;
             background: #1e293b;
             border: 4px solid #475569;
             border-radius: 12px;
@@ -122,15 +123,15 @@
         }
         .lan-port::after {
             content: '';
-            width: 60px;
-            height: 50px;
+            width: 54px;
+            height: 45px;
             background: #0f172a;
             border-radius: 4px;
         }
         .port-led {
             position: absolute;
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             background: #334155;
             border-radius: 50%;
             top: 8px;
@@ -148,11 +149,11 @@
         }
 
         .connector {
-            width: 65px;
-            height: 120px;
+            width: 60px;
+            height: 110px;
             background: #334155;
             border-radius: 8px;
-            margin-top: 30px;
+            margin-top: 25px;
             position: relative;
             cursor: pointer;
             transition: transform 0.05s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -160,37 +161,37 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            padding-top: 15px;
+            padding-top: 12px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.7);
         }
         .connector-clip {
-            width: 20px;
-            height: 35px;
+            width: 18px;
+            height: 30px;
             background: var(--zyxel-green);
             position: absolute;
-            top: -25px;
+            top: -22px;
             border-radius: 4px 4px 0 0;
             z-index: -1;
         }
         .connector-brand {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 900;
             color: #0f172a;
             background: var(--zyxel-green);
-            padding: 1px 6px;
+            padding: 1px 5px;
             border-radius: 4px;
             letter-spacing: 1px;
         }
 
         .connector.inserted {
-            transform: translateY(-55px);
+            transform: translateY(-50px);
         }
 
         .footer-tips {
             background: rgba(17, 24, 39, 0.85);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 12px;
-            padding: 12px;
+            padding: 10px;
             font-size: 13px;
             color: #e2e8f0;
             margin-bottom: 15px;
@@ -204,7 +205,7 @@
             background: linear-gradient(180deg, var(--zyxel-green) 0%, var(--zyxel-dark-green) 100%);
             border: none;
             color: white;
-            padding: 15px;
+            padding: 14px;
             font-size: 18px;
             font-weight: bold;
             border-radius: 12px;
@@ -213,6 +214,7 @@
             transition: transform 0.1s;
             text-align: center;
             width: 100%;
+            z-index: 50; /* 確保按鈕永遠位於最上層可點擊區域 */
         }
         .start-btn:active { transform: scale(0.98); }
 
@@ -363,6 +365,7 @@
         const bgImg = new Image();
         bgImg.src = '遊戲背景.png';
 
+        // 徹底封鎖手機版雙擊放大的預設瀏覽器行為
         document.addEventListener('touchstart', function (event) {
             if (event.touches.length > 1) {
                 event.preventDefault();
@@ -446,6 +449,7 @@
             currentTitle = '繼續加油';
             currentDesc = '熱身完畢，再玩一次，挑戰手指極限吧！';
 
+            // 修改為您指定的全新等級範圍門檻
             if (score >= 130) {
                 currentGrade = 'SSS'; currentTitle = '超神玩家';
                 currentDesc = '你的手指已經超越光速！跟 Zyxel Cat.6A 一樣穩如泰山、堅不可摧！';
@@ -480,6 +484,7 @@
             startGame();
         });
 
+        // 點擊分享成績自動產生成績單圖檔並下載
         document.getElementById('btn-share').addEventListener('click', () => {
             const canvas = document.getElementById('share-canvas');
             const ctx = canvas.getContext('2d');
