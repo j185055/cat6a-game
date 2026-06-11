@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>最強網路線挑戰賽 - Zyxel Cat.6A</title>
+    <style>
+        :root {
+            --zyxel-green: #22c55e;
+            --zyxel-dark-green: #15803d;
+            --bg-dark: #0b0f17;
+            --panel-bg: rgba(17, 24, 39, 0.85);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: #1e293b; /* 外層底色改為深藍灰，更有質感 */
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 模擬手機 RWD 容器 */
+        #game-container {
+            width: 100%;
+            max-width: 450px;
+            height: 100vh;
+            max-height: 850px;
+            background-image: url('./遊戲背景.png'); /* 確保抓取同資料夾的圖片 */
+            background-size: cover;
+            background-position: top center;
+            background-repeat: no-repeat;
+            border: 2px solid #334155;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* 關鍵修正：將所有遊戲物件對齊底部 */
+            padding: 20px;
+            padding-bottom: 30px;
+            overflow: hidden;
+            background-color: #000;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .header, .stage-area {
+            display: none;
+        }
+        
+        .dashboard {
+            display: flex;
+            gap: 15px;
+            margin-top: auto; /* 關鍵修正：自動推開上方空間，不遮擋主視覺 */
+            margin-bottom: 20px;
+        }
+        .panel {
+            flex: 1;
+            background: var(--panel-bg);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px); /* 增加背景模糊，讓數值更清晰 */
+        }
+        .panel-label {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+        .panel-value {
+            font-family: monospace;
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--zyxel-green);
+            text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+        .panel-value.warning {
+            color: #ef4444;
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        .interactive-zone {
+            min-height: 240px; /* 固定高度，避免過度延展 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: radial-gradient(circle, rgba(34,197,94,0.1) 0%, rgba(0,0,0,0) 70%);
+            margin-bottom: 20px;
+            border-radius: 20px;
+        }
+
+        .lan-port {
+            width: 100px;
+            height: 100px;
+            background: #1e293b;
+            border: 4px solid #475569;
+            border-radius: 12px;
+            position: relative;
+            box-shadow: inset 0 0 20px #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: border-color 0.1s;
+        }
+        .lan-port::after {
+            content: '';
+            width: 60px;
+            height: 50px;
+            background: #0f172a;
+            border-radius: 4px;
+        }
+        .port-led {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #334155;
+            border-radius: 50%;
+            top: 8px;
+        }
+        .port-led.left { left: 15px; }
+        .port-led.right { right: 15px; }
+        
+        .lan-port.active {
+            border-color: var(--zyxel-green);
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.4);
+        }
+        .lan-port.active .port-led {
+            background: var(--zyxel-green);
+            box-shadow: 0 0 8px var(--zyxel-green);
+        }
+
+        .connector {
+            width: 65px;
+            height: 120px;
+            background: #334155;
+            border-radius: 8px;
+            margin-top: 30px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.05s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 15px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.7);
+        }
+        .connector-clip {
+            width: 20px;
+            height: 35px;
+            background: var(--zyxel-green);
+            position: absolute;
+            top: -25px;
+            border-radius: 4px 4px 0 0;
+            z-index: -1;
+        }
+        .connector-brand {
+            font-size: 11px;
+            font-weight: 900;
+            color: #0f172a;
+            background: var(--zyxel-green);
+            padding: 1px 6px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+        }
+
+        .connector.inserted {
+            transform: translateY(-55px);
+        }
+
+        .footer-tips {
+            background: rgba(17, 24, 39, 0.85);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 13px;
+            color: #e2e8f0;
+            margin-bottom: 15px;
+            backdrop-filter: blur(4px);
+        }
+        .tip-row { display: flex; align-items: center; margin-bottom: 6px; }
+        .tip-row:last-child { margin-bottom: 0; }
+        .tip-icon { color: var(--zyxel-green); font-weight: bold; margin-right: 8px; font-size: 16px; }
+
+        .start-btn {
+            background: linear-gradient(180deg, var(--zyxel-green) 0%, var(--zyxel-dark-green) 100%);
+            border: none;
+            color: white;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+            transition: transform 0.1s;
+            text-align: center;
+            width: 100%;
+        }
+        .start-btn:active { transform: scale(0.98); }
+
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.95);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .result-badge {
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #f59e0b 0%, #b45309 100%);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            font-weight: 900;
+            color: #fff;
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.4);
+            margin-bottom: 15px;
+        }
+        .result-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #fff; }
+        .result-score { font-size: 18px; color: #94a3b8; margin-bottom: 20px; text-align: center; }
+        .result-score span { color: var(--zyxel-green); font-weight: bold; font-size: 24px;}
+        .result-desc { text-align: center; font-size: 14px; color: #cbd5e1; margin-bottom: 30px; line-height: 1.6; }
+        
+        .action-btns { display: flex; gap: 10px; width: 100%; }
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            font-size: 14px;
+        }
+        .btn-restart { background: #334155; color: #fff; }
+        .btn-share { background: var(--zyxel-green); color: #fff; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 15px rgba(34, 197, 94, 0.4); }
+            50% { box-shadow: 0 0 35px rgba(34, 197, 94, 0.8); }
+            100% { box-shadow: 0 0 15px rgba(34, 197, 94, 0.4); }
+        }
+        .fever-active {
+            animation: pulse 0.5s infinite;
+            border-color: #f59e0b !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div class="dashboard">
+            <div class="panel">
+                <div class="panel-label">挑戰時間</div>
+                <div class="panel-value" id="timer">30.0</div>
+            </div>
+            <div class="panel">
+                <div class="panel-label">目前次數</div>
+                <div class="panel-value" id="score-ghost">0</div>
+            </div>
+        </div>
+
+        <div class="interactive-zone">
+            <div class="lan-port" id="lan-port">
+                <div class="port-led left"></div>
+                <div class="port-led right"></div>
+            </div>
+            
+            <div class="connector" id="connector">
+                <div class="connector-clip"></div>
+                <div class="connector-brand">ZYXEL</div>
+            </div>
+        </div>
+
+        <div class="footer-tips" id="tips-panel">
+            <div class="tip-row"><span class="tip-icon">⚡</span>保持節奏，快速插拔能獲得更高的分數！</div>
+            <div class="tip-row"><span class="tip-icon">🛡️</span>Zyxel Cat.6A 接頭耐用升級，插拔更可靠！</div>
+        </div>
+
+        <button class="start-btn" id="main-action-btn">開始挑戰</button>
+
+        <div class="overlay" id="result-overlay">
+            <div class="result-badge" id="res-badge">C</div>
+            <div class="result-title" id="res-title">繼續加油</div>
+            <div class="result-score">共完成 <span id="res-score">0</span> 次完美插拔</div>
+            <div class="result-desc" id="res-desc">文案載入中...</div>
+            <div class="action-btns">
+                <button class="action-btn btn-restart" id="btn-retry">再玩一次</button>
+                <button class="action-btn btn-share" id="btn-share" onclick="alert('成績已複製！快去分享給好友比拼手速吧！')">分享成績</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playClickSound(freq, duration) {
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        let gameState = 'IDLE'; 
+        let timeLeft = 30.0;
+        let score = 0;
+        let isInserted = false;
+        let timerInterval = null;
+        let lastClickTime = 0;
+
+        const timerEl = document.getElementById('timer');
+        const scoreEl = document.getElementById('score-ghost');
+        const lanPortEl = document.getElementById('lan-port');
+        const connectorEl = document.getElementById('connector');
+        const mainBtn = document.getElementById('main-action-btn');
+        const resultOverlay = document.getElementById('result-overlay');
+
+        mainBtn.addEventListener('click', () => {
+            if (gameState === 'IDLE') startGame();
+        });
+
+        connectorEl.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            if (gameState !== 'PLAYING') return;
+
+            const now = performance.now();
+            if (now - lastClickTime < 35) {
+                return;
+            }
+            lastClickTime = now;
+
+            isInserted = !isInserted;
+
+            if (isInserted) {
+                connectorEl.classList.add('inserted');
+                lanPortEl.classList.add('active');
+                playClickSound(600, 0.05); 
+            } else {
+                connectorEl.classList.remove('inserted');
+                lanPortEl.classList.remove('active');
+                playClickSound(400, 0.04); 
+                
+                score++;
+                scoreEl.textContent = score;
+            }
+        });
+
+        function startGame() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            gameState = 'PLAYING';
+            score = 0;
+            timeLeft = 30.0;
+            isInserted = false;
+            scoreEl.textContent = '0';
+            timerEl.classList.remove('warning');
+            lanPortEl.classList.remove('fever-active');
+            connectorEl.classList.remove('inserted');
+            lanPortEl.classList.remove('active');
+            
+            mainBtn.style.display = 'none';
+            
+            timerInterval = setInterval(() => {
+                timeLeft -= 0.1;
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    endGame();
+                }
+                if (timeLeft <= 5.0) {
+                    timerEl.classList.add('warning');
+                }
+                timerEl.textContent = timeLeft.toFixed(1);
+            }, 100);
+        }
+
+        function endGame() {
+            gameState = 'FINISHED';
+            clearInterval(timerInterval);
+            mainBtn.style.display = 'block';
+            mainBtn.textContent = '重新挑戰';
+            mainBtn.onclick = () => { location.reload(); };
+
+            let grade = 'C';
+            let title = '繼續加油';
+            let desc = '熱身完畢，再玩一次，挑戰手指極限吧！';
+
+            if (score >= 500) {
+                grade = 'SSS'; title = '超神玩家';
+                desc = '你的手指已經超越光速！跟 Zyxel Cat.6A 一樣穩如泰山、堅不可摧！';
+            } else if (score >= 200) {
+                grade = 'S'; title = '穩速達人';
+                desc = '手速驚人！這條線被你插拔到發光，依然完美零受損！';
+            } else if (score >= 150) {
+                grade = 'A'; title = '表現不錯';
+                desc = '節奏感很好喔！離網路界的終極耐力只差一步了！';
+            } else if (score >= 100) {
+                grade = 'B'; title = '再接再厲';
+                desc = '還可以更快！快換上 Zyxel Cat.6A 激發你的潛能！';
+            }
+
+            document.getElementById('res-badge').textContent = grade;
+            document.getElementById('res-title').textContent = title;
+            document.getElementById('res-score').textContent = score;
+            document.getElementById('res-desc').textContent = desc;
+            
+            const badge = document.getElementById('res-badge');
+            if(grade === 'SSS' || grade === 'S') {
+                badge.style.background = 'radial-gradient(circle, #f59e0b 0%, #b45309 100%)';
+            } else {
+                badge.style.background = 'radial-gradient(circle, #64748b 0%, #334155 100%)';
+            }
+
+            resultOverlay.classList.add('active');
+        }
+
+        document.getElementById('btn-retry').addEventListener('click', () => {
+            resultOverlay.classList.remove('active');
+            startGame();
+        });
+    </script>
+</body>
+</html>
