@@ -18,7 +18,6 @@
             padding: 0;
             user-select: none;
             -webkit-user-select: none;
-            /* 修正：禁止手機瀏覽器的預設雙擊放大與手勢縮放 */
             touch-action: manipulation;
         }
 
@@ -31,7 +30,6 @@
             align-items: center;
             min-height: 100vh;
             overflow: hidden;
-            /* 修正：防堵 iOS 橡皮筋回彈與外層滾動 */
             position: fixed;
             width: 100%;
             height: 100%;
@@ -57,7 +55,6 @@
             overflow: hidden;
             background-color: #000;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            /* 修正：確保容器內也完全不允許縮放手勢 */
             touch-action: none;
         }
 
@@ -321,10 +318,12 @@
             <div class="result-desc" id="res-desc">文案載入中...</div>
             <div class="action-btns">
                 <button class="action-btn btn-restart" id="btn-retry">再玩一次</button>
-                <button class="action-btn btn-share" id="btn-share" onclick="alert('成績已複製！快去分享給好友比拼手速吧！')">分享成績</button>
+                <button class="action-btn btn-share" id="btn-share">分享成績</button>
             </div>
         </div>
     </div>
+
+    <canvas id="share-canvas" style="display:none;" width="600" height="900"></canvas>
 
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -349,6 +348,10 @@
         let isInserted = false;
         let timerInterval = null;
         let lastClickTime = 0;
+        
+        let currentGrade = 'C';
+        let currentTitle = '繼續加油';
+        let currentDesc = '熱身完畢，再玩一次，挑戰手指極限吧！';
 
         const timerEl = document.getElementById('timer');
         const scoreEl = document.getElementById('score-ghost');
@@ -357,10 +360,12 @@
         const mainBtn = document.getElementById('main-action-btn');
         const resultOverlay = document.getElementById('result-overlay');
 
-        // 修正：用 JavaScript 徹底封鎖手機雙擊放大的預設行為
+        const bgImg = new Image();
+        bgImg.src = '遊戲背景.png';
+
         document.addEventListener('touchstart', function (event) {
             if (event.touches.length > 1) {
-                event.preventDefault(); // 阻擋兩隻手指以上的放大手勢
+                event.preventDefault();
             }
         }, { passive: false });
 
@@ -368,7 +373,7 @@
         document.addEventListener('touchend', function (event) {
             const now = (new Date()).getTime();
             if (now - lastTouchEnd <= 300) {
-                event.preventDefault(); // 阻擋 300 毫秒內的雙擊放大預設行為
+                event.preventDefault();
             }
             lastTouchEnd = now;
         }, { passive: false });
@@ -437,31 +442,31 @@
             mainBtn.textContent = '重新挑戰';
             mainBtn.onclick = () => { location.reload(); };
 
-            let grade = 'C';
-            let title = '繼續加油';
-            let desc = '熱身完畢，再玩一次，挑戰手指極限吧！';
+            currentGrade = 'C';
+            currentTitle = '繼續加油';
+            currentDesc = '熱身完畢，再玩一次，挑戰手指極限吧！';
 
             if (score >= 130) {
-                grade = 'SSS'; title = '超神玩家';
-                desc = '你的手指已經超越光速！跟 Zyxel Cat.6A 一樣穩如泰山、堅不可摧！';
+                currentGrade = 'SSS'; currentTitle = '超神玩家';
+                currentDesc = '你的手指已經超越光速！跟 Zyxel Cat.6A 一樣穩如泰山、堅不可摧！';
             } else if (score >= 120) {
-                grade = 'S'; title = '穩速達人';
-                desc = '手速驚人！這條線被你拔插到發光，依然完美零受損！';
+                currentGrade = 'S'; currentTitle = '穩速達人';
+                currentDesc = '手速驚人！這條線被你拔插到發光，依然完美零受損！';
             } else if (score >= 100) {
-                grade = 'A'; title = '表現不錯';
-                desc = '節奏感很好喔！離網路界的終極耐力只差一步了！';
+                currentGrade = 'A'; currentTitle = '表現不錯';
+                currentDesc = '節奏感很好喔！離網路界的終極耐力只差一步了！';
             } else if (score >= 70) {
-                grade = 'B'; title = '再接再厲';
-                desc = '還可以更快！快換上 Zyxel Cat.6A 激發你的潛能！';
+                currentGrade = 'B'; currentTitle = '再接再厲';
+                currentDesc = '還可以更快！快換上 Zyxel Cat.6A 激發你的潛能！';
             }
 
-            document.getElementById('res-badge').textContent = grade;
-            document.getElementById('res-title').textContent = title;
+            document.getElementById('res-badge').textContent = currentGrade;
+            document.getElementById('res-title').textContent = currentTitle;
             document.getElementById('res-score').textContent = score;
-            document.getElementById('res-desc').textContent = desc;
+            document.getElementById('res-desc').textContent = currentDesc;
             
             const badge = document.getElementById('res-badge');
-            if(grade === 'SSS' || grade === 'S') {
+            if(currentGrade === 'SSS' || currentGrade === 'S') {
                 badge.style.background = 'radial-gradient(circle, #f59e0b 0%, #b45309 100%)';
             } else {
                 badge.style.background = 'radial-gradient(circle, #64748b 0%, #334155 100%)';
@@ -473,6 +478,111 @@
         document.getElementById('btn-retry').addEventListener('click', () => {
             resultOverlay.classList.remove('active');
             startGame();
+        });
+
+        document.getElementById('btn-share').addEventListener('click', () => {
+            const canvas = document.getElementById('share-canvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            if (bgImg.complete && bgImg.naturalWidth !== 0) {
+                ctx.drawImage(bgImg, 0, 0, w, h);
+                ctx.fillStyle = 'rgba(11, 15, 23, 0.75)';
+                ctx.fillRect(0, 0, w, h);
+            } else {
+                let grad = ctx.createLinearGradient(0, 0, 0, h);
+                grad.addColorStop(0, '#0f172a');
+                grad.addColorStop(1, '#020617');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+            }
+
+            ctx.fillStyle = '#22c55e';
+            ctx.font = 'bold 36px "PingFang TC", "Microsoft JhengHei"';
+            ctx.textAlign = 'center';
+            ctx.fillText('最強網路線挑戰賽', w / 2, 110);
+            
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '20px monospace';
+            ctx.fillText('ZYXEL Cat.6A DURABILITY TEST', w / 2, 150);
+
+            let centerX = w / 2;
+            let centerY = 310;
+            let radius = 85;
+            
+            let badgeGrad = ctx.createRadialGradient(centerX, centerY, 10, centerX, centerY, radius);
+            if (currentGrade === 'SSS' || currentGrade === 'S') {
+                badgeGrad.addColorStop(0, '#f59e0b');
+                badgeGrad.addColorStop(1, '#b45309');
+            } else {
+                badgeGrad.addColorStop(0, '#64748b');
+                badgeGrad.addColorStop(1, '#334155');
+            }
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = badgeGrad;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 76px "PingFang TC", "Microsoft JhengHei"';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(currentGrade, centerX, centerY + 3);
+            ctx.textBaseline = 'normal'; 
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 32px "PingFang TC", "Microsoft JhengHei"';
+            ctx.fillText(currentTitle, w / 2, 470);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '22px "PingFang TC", "Microsoft JhengHei"';
+            ctx.fillText('共完成', w / 2 - 80, 540);
+            
+            ctx.fillStyle = '#22c55e';
+            ctx.font = 'bold 52px monospace';
+            ctx.fillText(score, w / 2 + 10, 545);
+            
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '22px "PingFang TC", "Microsoft JhengHei"';
+            ctx.fillText('次完美拔插', w / 2 + 100, 540);
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '20px "PingFang TC", "Microsoft JhengHei"';
+            
+            let text = currentDesc;
+            let line1 = text.substring(0, 19);
+            let line2 = text.substring(19);
+            ctx.fillText(line1, w / 2, 620);
+            if(line2) {
+                ctx.fillText(line2, w / 2, 660);
+            }
+
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(25, 25, w - 50, h - 50);
+
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.15)';
+            ctx.fillRect(40, 760, w - 80, 80);
+            
+            ctx.fillStyle = '#22c55e';
+            ctx.font = 'bold 20px "PingFang TC", "Microsoft JhengHei"';
+            ctx.fillText('🛡️ Zyxel 兆勤科技 · 點燃你的極速網路', w / 2, 808);
+
+            try {
+                const dataUrl = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = `Zyxel挑戰賽_${score}次拔插_成績單.png`;
+                link.href = dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (err) {
+                alert('下載圖片失敗，請直接使用手機內建截圖功能分享成績喔！');
+            }
         });
     </script>
 </body>
